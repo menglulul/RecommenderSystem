@@ -7,6 +7,8 @@ from sklearn.metrics import mean_squared_error
 from math import sqrt
 import pandas as pd
 import numpy as np
+import operator
+import re
 
 def read_data(file_path):
     rate_data = pd.read_csv(file_path).drop(['userid'], axis =1).to_numpy()
@@ -49,8 +51,45 @@ def cal_rate_sim(rate_train, rate_test):
 # def pred_rating(rate_train, rate_sim):
 #     return rate_prediction
 
+def load_tags(file_path):
+    data = pd.read_csv(file_path)
+    tag_data = data['tag']
+    print(tag_data)
+    return tag_data
+
+def gen_vocab(tag_train):
+    K = 200 # choose top K words
+    dict = {}
+    for text in tag_train:
+        words = re.split(',',text)
+        for word in words:
+            if word in dict:
+                dict[word] += 1
+            else:
+                dict[word] = 1
+    vocab = []
+    sorted_dict = sorted(dict.items(), key=operator.itemgetter(1), reverse=True)
+    cnt=0
+    for item in sorted_dict:
+        vocab.append(item[0])
+        cnt +=1
+        if K==cnt:
+            break
+    print(vocab)
+    return vocab
+
+def bagOfWords(tag_raw, vocab):
+    tag_mat = np.zeros((len(tag_raw), len(vocab)))
+    for i in len(tag_raw):
+        words = re.split(',',tag_raw[i])
+        for j in range(len(vocab)):
+            for word in words:
+                if vocab[j]==word:
+                    tag_mat[i][j] += 1
+    return tag_mat
+
 def pred_rating(rate_train, rate_sim, k):
-    
+    return rate_prediction
 
 def evaluation(rate_prediction, rate_test):
     RMSE = sqrt(mean_squared_error(rate_test, rate_prediction))
@@ -73,6 +112,13 @@ if __name__ == "__main__":
     
     evaluation(rate_prediction, rate_test)
 
+
+    file_path = "processed_tags.csv"
+    tag_data = load_tags(file_path)
+    tag_train_raw, tag_vali_raw = train_vali_split(tag_data)
+    vocab = gen_vocab(tag_train_raw)
+    tag_train = bagOfWords(tag_train_raw, vocab)
+    tag_vali = bagOfWords(tag_vali_raw, vocab)
     # rate_train, rate_vali = train_vali_split(rate_data)
     # time_train, time_vali = train_vali_split(time_data)
     # tag_train, tag_vali = train_vali_split(tag_data)
