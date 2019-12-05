@@ -2,8 +2,12 @@
 # -*- coding: utf-8 -*-
 
 #datamining project
+from scipy.stats import pearsonr
+from sklearn.metrics import mean_squared_error
+from math import sqrt
 
 def read_data(file_path):
+
     return rate_data, time_data, tag_data
 
 def train_vali_split(data):
@@ -12,10 +16,13 @@ def train_vali_split(data):
 def tag2vec(tag_train, tag_vali):
     return tag_train_vec, tag_vali_vec
 
-def cal_pearson(a, b):
-    return pearson
+def cal_pearson(u1, u2):
+    corr, pvalue = pearsonr(u1, u2)
+    print("Pearsonr", corr)
+    print("p-value",pvalue)
+    return corr
 
-def cal_eucl_dis(a, b):
+def cal_eucl_dis(u1, u2):
     return dis
 
 def cal_combined_sim(rate_sim, time_sim, tag_sim, a, b, c):
@@ -25,6 +32,7 @@ def pred_rating(rate_train, rate_sim):
     return rate_prediction
 
 def evaluation(rate_prediction, rate_test):
+    RMSE = sqrt(mean_squared_error(rate_test, rate_prediction))
     print("RMSE",RMSE)
 
 if __name__ == "__main__":
