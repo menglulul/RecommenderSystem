@@ -146,7 +146,7 @@ def evaluation(rate_prediction, rate_test):
 
 if __name__ == "__main__":
     # rating 
-    r_file_path = "processed_ratings.csv"
+    r_file_path = "processed_ratings.1.csv"
     ratings = read_data(r_file_path)
     rating_train, rating_vali = train_vali_split(ratings)
     rating_sim = cal_rate_sim(rating_train, rating_vali)
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     evaluation(rating_prediction, rating_vali)
 
     # time
-    t_file_path = "processed_times.csv"
+    t_file_path = "processed_times.1.csv"
     times = read_data(t_file_path)
     time_train, time_vali = train_vali_split(times)
     time_sim = cal_rate_sim(time_train, time_vali)
@@ -168,7 +168,13 @@ if __name__ == "__main__":
     # for i in range(len(rec_ix)):
     #     print(rating_vali[i, rec_ix[i,:]])
     
+    # weighted time
+    wtime_train = weighted_time.to_rating(time_train)
+    wtime_vali = weighted_time.to_rating(time_vali)
+    wtime_sim = cal_rate_sim(wtime_train, wtime_vali)
 
+    wtime_prediction = pred_rating(rating_train, wtime_sim, 5)
+    evaluation(wtime_prediction, rating_vali)
     
     
     # file_path = "processed_ratings.csv"
