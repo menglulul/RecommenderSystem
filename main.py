@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #datamining project
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, tmean
 from sklearn.metrics import mean_squared_error
 from math import sqrt
 import pandas as pd
@@ -10,18 +10,16 @@ import numpy as np
 import operator
 import re
 
-def read_data(file_path):
-    rate_data = pd.read_csv(file_path).drop(['userid'], axis =1).to_numpy()
 
-    time_data = ''
-    tag_data = ''
-    return rate_data, time_data, tag_data
+def read_data(file_path):
+    data = pd.read_csv(file_path).to_numpy()
+    return data
 
 def train_vali_split(data, ratio=0.7):
     n = len(data)
     cut = round(n*ratio)
-    train_set = data[:cut]
-    vali_set = data[cut:]
+    train_set = data[:cut, 1:]
+    vali_set = data[cut:, 1:]
     return train_set, vali_set
 
 # def tag2vec(tag_train, tag_vali):
@@ -54,7 +52,7 @@ def cal_rate_sim(rate_train, rate_test):
 def load_tags(file_path):
     data = pd.read_csv(file_path)
     tag_data = data['tag']
-    print(tag_data)
+    # print(tag_data)
     return tag_data
 
 def gen_vocab(tag_train):
@@ -88,37 +86,118 @@ def bagOfWords(tag_raw, vocab):
                     tag_mat[i][j] += 1
     return tag_mat
 
+def get_average_rating(ratings):
+    '''
+    get average rating of a movie based on available ratings by similar users
+    
+    args:
+    @ratings (1darray) ratings of a movie by k similar users
+    
+    returns:
+    @rating (float) average rating
+    '''    
+    rating = 0.0
+    try:
+        # find the arithmetic mean of given values, ignoring values outside [0.5, 5]
+        rating = tmean(ratings, (0.5, 5))
+    except:
+        # tmean() raises error if there are no values within given range
+        # print('no valid ratings from similar users')
+        pass
+    return rating
+
+def get_k_highest(arr, k):
+    '''
+    find k largest elements from the arr
+    
+    args:
+    @arr (1darray)
+    @k (int)
+    
+    returns:
+    (1darray) indices of k elements in the arr 
+    '''
+    
+    arr_sorted = np.argsort(arr)[::-1] # sort in descending order
+    return arr_sorted[:k] # get first k items
+
 def pred_rating(rate_train, rate_sim, k):
-    return rate_prediction
+    '''
+    get predicted ratings based on ratings from k most similar users
+    
+    args:
+    @rate_train (2darray) ratings of (col) movies, from (row) users
+    @rate_sim (2darray) similarty scores between (row) users known and (col) users to be predicted
+    
+    returns:
+    prediction (2darray) predicted ratings of (col) movies, for (row) users
+    '''
+    prediction = np.zeros((len(rate_sim), rate_train.shape[1]))
+    for i in range(len(rate_sim)):
+        sim = rate_sim[i] # all user sim scores for i-th user
+        sim_users = get_k_highest(sim, k) # indices of k most similar users
+        sim_ratings = rate_train[sim_users, :] # ratings by k most similar users
+        prediction[i] = np.apply_along_axis(get_average_rating, 0, sim_ratings) # averaged ratings for i-th user
+    return prediction
 
 def evaluation(rate_prediction, rate_test):
     RMSE = sqrt(mean_squared_error(rate_test, rate_prediction))
     print("RMSE",RMSE)
 
 if __name__ == "__main__":
+    # rating 
+    r_file_path = "processed_ratings.csv"
+    ratings = read_data(r_file_path)
+    rating_train, rating_vali = train_vali_split(ratings)
+    rating_sim = cal_rate_sim(rating_train, rating_vali)
 
-    file_path = "fakerating.csv"
-    rate_data, time_data, tag_data = read_data(file_path)
-    print(rate_data)
+    rating_prediction = pred_rating(rating_train, rating_sim, 5)
+    evaluation(rating_prediction, rating_vali)
+
+    # time
+    t_file_path = "processed_times.csv"
+    times = read_data(t_file_path)
+    time_train, time_vali = train_vali_split(times)
+    time_sim = cal_rate_sim(time_train, time_vali)
+
+    time_prediction = pred_rating(rating_train, time_sim, 5)
+    evaluation(time_prediction, rating_vali)
+    # # recommend movies
+    # rec_ix = np.apply_along_axis(get_k_highest, 1, time_prediction, 5)
+    # print(rec_ix, rec_ix.shape)
+    # # print true ratings in testset for recommended movies
+    # for i in range(len(rec_ix)):
+    #     print(rating_vali[i, rec_ix[i,:]])
     
-    rate_train, rate_vali = train_vali_split(rate_data)
-    sim_mat = cal_rate_sim(rate_train, rate_vali)
-    
-    k=2
+    # weighted time
     
     
-    #predict the rating of each user in vali set
-    rate_prediction = pred_rating(rate_train, rate_sim, k)
     
-    evaluation(rate_prediction, rate_test)
+    # file_path = "processed_ratings.csv"
+    # ratings = read_data(file_path)
+    # rating_train, rating_vali = train_vali_split(ratings)
+    # print(len(rating_train), len(rating_vali))
+    # rating_sim = cal_rate_sim(rating_train[:,1:], rating_vali[:,1:])
+    # print(rating_sim, rating_sim.shape)
+
+    # rate_train, rate_vali = train_vali_split(rate_data)
+    # sim_mat = cal_rate_sim(rate_train, rate_vali)
+    
+    # k=2
+    
+    
+    # #predict the rating of each user in vali set
+    # rate_prediction = pred_rating(rate_train, rate_sim, k)
+    
+    # evaluation(rate_prediction, rate_test)
 
 
-    file_path = "processed_tags.csv"
-    tag_data = load_tags(file_path)
-    tag_train_raw, tag_vali_raw = train_vali_split(tag_data)
-    vocab = gen_vocab(tag_train_raw)
-    tag_train = bagOfWords(tag_train_raw, vocab)
-    tag_vali = bagOfWords(tag_vali_raw, vocab)
+    # file_path = "processed_tags.csv"
+    # tag_data = load_tags(file_path)
+    # tag_train_raw, tag_vali_raw = train_vali_split(tag_data)
+    # vocab = gen_vocab(tag_train_raw)
+    # tag_train = bagOfWords(tag_train_raw, vocab)
+    # tag_vali = bagOfWords(tag_vali_raw, vocab)
     # rate_train, rate_vali = train_vali_split(rate_data)
     # time_train, time_vali = train_vali_split(time_data)
     # tag_train, tag_vali = train_vali_split(tag_data)
