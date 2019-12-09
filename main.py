@@ -50,6 +50,33 @@ def cal_rate_sim(rate_train, rate_test):
 #     return rate_prediction
 
 def pred_rating(rate_train, rate_sim, k):
+    rating_avg = np.mean(rate_train, axis=1)
+    print(rate_train)
+    print(rate_sim)
+    # ind = np.argsort(rate_sim, axis=1)
+    # # rate_sim.sort(axis=1)
+    # np.take_along_axis(rate_train, ind, axis=1)
+
+    print("sort")
+    print(rate_train)
+    print(rate_sim)
+    reverse_rate_sim = np.flip(rate_sim, axis=1)
+    reverse_rate_train = np.flip(rate_train, axis=1)
+
+    print("reverse")
+    print(rate_train)
+    print(rate_sim)
+    # len_uid = len(rate_train)
+    # len_movieid = len(rate_train[0])
+    # print(rate_train)
+    # pred_mat = np.zeros((len_uid, len_movieid))
+    # for i in range(len_uid):
+    #     for j in range(len_movieid):
+    #         p_sub =
+    #         p_ij = rating_avg[i] + p_sub
+    # print(pred_mat)
+    # return pred_mat
+    return ''
     
 
 def evaluation(rate_prediction, rate_test):
@@ -60,18 +87,21 @@ if __name__ == "__main__":
 
     file_path = "fakerating.csv"
     rate_data, time_data, tag_data = read_data(file_path)
-    print(rate_data)
+    # print(rate_data)
     
     rate_train, rate_vali = train_vali_split(rate_data)
-    sim_mat = cal_rate_sim(rate_train, rate_vali)
-    
+    rate_sim = cal_rate_sim(rate_train, rate_vali)
+    # print(rate_train)
+
     k=2
-    
-    
+
     #predict the rating of each user in vali set
     rate_prediction = pred_rating(rate_train, rate_sim, k)
+
+
+
     
-    evaluation(rate_prediction, rate_test)
+    # evaluation(rate_prediction, rate_test)
 
     # rate_train, rate_vali = train_vali_split(rate_data)
     # time_train, time_vali = train_vali_split(time_data)
