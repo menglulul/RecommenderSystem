@@ -10,6 +10,7 @@ import numpy as np
 import operator
 import re
 
+import weighted_time
 
 def read_data(file_path):
     data = pd.read_csv(file_path).to_numpy()
@@ -106,20 +107,20 @@ def get_average_rating(ratings):
         pass
     return rating
 
-def get_k_highest(arr, k):
+def get_k_highest(arr, arr_target, k):
     '''
-    find k largest elements from the arr
+    find k largest elements from the target arr
     
     args:
-    @arr (1darray)
+    @arr (1darray) arr to be compared
+    @arr_target (ndarray) arr to get k elements from
     @k (int)
     
     returns:
-    (1darray) indices of k elements in the arr 
+    (1darray) k elements in target arr 
     '''
-    
-    arr_sorted = np.argsort(arr)[::-1] # sort in descending order
-    return arr_sorted[:k] # get first k items
+    idx = np.argpartition(arr, -k)[-k:]
+    return arr_target[idx]
 
 def pred_rating(rate_train, rate_sim, k):
     '''
@@ -135,9 +136,8 @@ def pred_rating(rate_train, rate_sim, k):
     prediction = np.zeros((len(rate_sim), rate_train.shape[1]))
     for i in range(len(rate_sim)):
         sim = rate_sim[i] # all user sim scores for i-th user
-        sim_users = get_k_highest(sim, k) # indices of k most similar users
-        sim_ratings = rate_train[sim_users, :] # ratings by k most similar users
-        prediction[i] = np.apply_along_axis(get_average_rating, 0, sim_ratings) # averaged ratings for i-th user
+        sim_users = get_k_highest(sim, rate_train, k) # ratings by k most similar users
+        prediction[i] = np.apply_along_axis(get_average_rating, 0, sim_users) # averaged ratings for i-th user
     return prediction
 
 def evaluation(rate_prediction, rate_test):
@@ -164,13 +164,11 @@ if __name__ == "__main__":
     evaluation(time_prediction, rating_vali)
     # # recommend movies
     # rec_ix = np.apply_along_axis(get_k_highest, 1, time_prediction, 5)
-    # print(rec_ix, rec_ix.shape)
     # # print true ratings in testset for recommended movies
     # for i in range(len(rec_ix)):
     #     print(rating_vali[i, rec_ix[i,:]])
     
-    # weighted time
-    
+
     
     
     # file_path = "processed_ratings.csv"
