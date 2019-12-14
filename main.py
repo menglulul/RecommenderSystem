@@ -9,14 +9,28 @@ import pandas as pd
 import numpy as np
 import operator
 import re
-
-import weighted_time
+import time
+import math
 
 
 def read_data(file_path):
-    data = pd.read_csv(file_path).to_numpy()
+    raw_data = pd.read_csv(file_path).to_numpy()
+    data = raw_data[:,1:]
     return data
 
+
+# split the data into 2 parts: traning set, validation set   
+# i means return ith fold 
+def fold(data, i, nfolds=5):
+    n = len(data)
+    n_left = round(n*(i/nfolds))
+    n_right = round(n*((i+1)/nfolds))
+    t1 = data[:n_left]
+    t2 = data[n_left:n_right]
+    t3 = data[n_right:]
+    train_set = np.concatenate((t1,t3), axis=0)
+    vali_set = t2
+    return train_set, vali_set
 
 def train_vali_split(data, ratio=0.7):
     n = len(data)
@@ -45,22 +59,17 @@ def cal_rate_sim(rate_train, rate_test):
             sim_mat[i][j] = cal_pearson(rate_train[j], rate_test[i])
     return sim_mat
 
-
-# def cal_eucl_dis(u1, u2):
-#     return dis
-#
-# def cal_combined_sim(rate_sim, time_sim, tag_sim, a, b, c):
-#     return combined_sim
-
-# def pred_rating(rate_train, rate_sim):
-#     return rate_prediction
-
-def load_tags(file_path):
-    data = pd.read_csv(file_path)
-    tag_data = data['tag']
-    # print(tag_data)
-    return tag_data
-
+def cal_tag_sim(tag_train, tag_test):
+    len_train = len(tag_train)
+    len_test = len(tag_test)
+    vocab = gen_vocab(tag_train)
+    data_train = bagOfWords(tag_train, vocab)
+    data_test = bagOfWords(tag_test, vocab)
+    sim_mat = np.zeros((len_test, len_train))
+    for i in range(len_test):
+        for j in range(len_train):
+            sim_mat[i][j] = 1/(np.linalg.norm(data_train[j]-data_test[i]) + 1)
+    return sim_mat
 
 def gen_vocab(tag_train):
     K = 200  # choose top K words
@@ -80,7 +89,7 @@ def gen_vocab(tag_train):
         cnt += 1
         if K == cnt:
             break
-    print(vocab)
+    print("vocab",vocab)
     return vocab
 
 
@@ -150,80 +159,106 @@ def pred_rating(rate_train, rate_sim, k):
         prediction[i] = np.apply_along_axis(get_average_rating, 0, sim_users)  # averaged ratings for i-th user
     return prediction
 
+def weighted_time(u_ts):
+    u_wt = np.zeros((u_ts.shape))
+    for i in range(len(u_ts)):
+        u_t = u_ts[i]
+        hl = np.amin(u_t) + (np.amax(u_t) - np.amin(u_t)) / 2 # get mean timestamp
+        t_recent = np.amax(u_t)
+        func = lambda t: math.exp(-math.log(2) * (t_recent - t) / hl)
+        u_wt[i] = np.array([func(x) for x in u_t])
+    return u_wt
 
 def evaluation(rate_prediction, rate_test):
     RMSE = sqrt(mean_squared_error(rate_test, rate_prediction))
     print("RMSE", RMSE)
+    return RMSE
 
 
 if __name__ == "__main__":
-    # rating
-    r_file_path = "processed_ratings.1.csv"
+    r_file_path = "new_processed_ratings.csv"
     ratings = read_data(r_file_path)
-    rating_train, rating_vali = train_vali_split(ratings)
-    rating_sim = cal_rate_sim(rating_train, rating_vali)
+    print("ratings data load successfully")
+    print("total: ",len(ratings))
 
-    rating_prediction = pred_rating(rating_train, rating_sim, 5)
-    evaluation(rating_prediction, rating_vali)
-
-    # time
-    t_file_path = "processed_times.1.csv"
+    t_file_path = "new_processed_times.csv"
     times = read_data(t_file_path)
-    time_train, time_vali = train_vali_split(times)
-    time_sim = cal_rate_sim(time_train, time_vali)
+    print("time data load successfully")
+    print("total: ",len(times))
+    
+    tags_file_path = "new_processed_tags.csv"
+    tags = read_data(tags_file_path)
+    tags = tags[:, 1]
+    print("tags data load successfully")
+    print("total: ",len(tags))
 
-    time_prediction = pred_rating(rating_train, time_sim, 5)
-    evaluation(time_prediction, rating_vali)
-    # # recommend movies
-    # rec_ix = np.apply_along_axis(get_k_highest, 1, time_prediction, 5)
-    # # print true ratings in testset for recommended movies
-    # for i in range(len(rec_ix)):
-    #     print(rating_vali[i, rec_ix[i,:]])
+    fold_n = 5
+    k_list = [1,3,5,10,15,20,30,50]
+    #k_list = [10]
+    cv_rmse = np.zeros((3,len(k_list)))
 
-    # weighted time
-    wtime_train = weighted_time.to_rating(time_train)
-    wtime_vali = weighted_time.to_rating(time_vali)
-    wtime_sim = cal_rate_sim(wtime_train, wtime_vali)
+    print("base on ratings")
+    for i in range(fold_n):
+        ts = time.time()
+        rating_train, rating_vali = fold(ratings, i, fold_n)
+        rating_sim = cal_rate_sim(rating_train, rating_vali)
+        for k in k_list:
+            print("k",k)
+            rating_prediction = pred_rating(rating_train, rating_sim, k)
+            rmse = evaluation(rating_prediction, rating_vali)
+            cv_rmse[0][k_list.index(k)] += rmse/fold_n
+        print("cost time:",time.time()-ts)
+    for k in k_list:
+        print("cross validation rmse when k =",k)
+        print(cv_rmse[0][k_list.index(k)])
+    
+    print("base on time")
+    for i in range(fold_n):
+        ts = time.time()
+        rating_train, rating_vali = fold(ratings, i, fold_n)
+        time_train, time_vali = fold(times, i, fold_n)
+        time_sim = cal_rate_sim(rating_train, rating_vali)
+        for k in k_list:
+            print("k",k)
+            time_prediction = pred_rating(rating_train, time_sim, k)
+            rmse = evaluation(time_prediction, rating_vali)
+            cv_rmse[1][k_list.index(k)] += rmse/fold_n
+        print("cost time:",time.time()-ts)
+    for k in k_list:
+        print("cross validation rmse when k =",k)
+        print(cv_rmse[1][k_list.index(k)])
 
-    wtime_prediction = pred_rating(rating_train, wtime_sim, 5)
-    evaluation(wtime_prediction, rating_vali)
+    print("base on tags - wordbag")
+    for i in range(fold_n):
+        ts = time.time()
+        rating_train, rating_vali = fold(ratings, i, fold_n)
+        tag_train, tag_vali = fold(tags, i, fold_n)
+        tag_sim = cal_tag_sim(rating_train, rating_vali)
+        for k in k_list:
+            print("k",k)
+            tag_prediction = pred_rating(rating_train, time_sim, k)
+            rmse = evaluation(tag_prediction, rating_vali)
+            cv_rmse[1][k_list.index(k)] += rmse/fold_n
+        print("cost time:",time.time()-ts)
+    for k in k_list:
+        print("cross validation rmse when k =",k)
+        print(cv_rmse[1][k_list.index(k)])
 
-    # file_path = "processed_ratings.csv"
-    # ratings = read_data(file_path)
-    # rating_train, rating_vali = train_vali_split(ratings)
-    # print(len(rating_train), len(rating_vali))
-    # rating_sim = cal_rate_sim(rating_train[:,1:], rating_vali[:,1:])
-    # print(rating_sim, rating_sim.shape)
 
-    # rate_train, rate_vali = train_vali_split(rate_data)
-    # sim_mat = cal_rate_sim(rate_train, rate_vali)
-
-    # k=2
-
-    # #predict the rating of each user in vali set
-    # rate_prediction = pred_rating(rate_train, rate_sim, k)
-
-    # evaluation(rate_prediction, rate_test)
-
-    # file_path = "processed_tags.csv"
-    # tag_data = load_tags(file_path)
-    # tag_train_raw, tag_vali_raw = train_vali_split(tag_data)
-    # vocab = gen_vocab(tag_train_raw)
-    # tag_train = bagOfWords(tag_train_raw, vocab)
-    # tag_vali = bagOfWords(tag_vali_raw, vocab)
-    # rate_train, rate_vali = train_vali_split(rate_data)
-    # time_train, time_vali = train_vali_split(time_data)
-    # tag_train, tag_vali = train_vali_split(tag_data)
-    # tag_train_vec, tag_vali_vec = tag2vec(tag_train, tag_vali)
-    #
-    # #find out how similar each user in train set and each user in vali set are
-    # rate_sim = cal_rate_sim(rate_train, rate_vali)
-    # time_sim = cal_rate_sim(rate_train, rate_vali)
-    # tag_sim = cal_rate_sim(tag_train_vec, tag_vali_vec)
-    #
-    # sim_mat = cal_combined_sim(rate_sim, time_sim, tag_sim, a, b, c)
-    #
-    # #predict the rating of each user in vali set
-    # rate_prediction = pred_rating(rate_train, rate_sim)
-    #
-    # evaluation(rate_prediction, rate_test)
+    print("weighted time")
+    for i in range(fold_n):
+        ts = time.time()
+        rating_train, rating_vali = fold(ratings, i, fold_n)
+        time_train, time_vali = fold(times, i, fold_n)
+        wtime_train = weighted_time(time_train)
+        wtime_vali = weighted_time(time_vali)
+        wtime_sim = cal_rate_sim(wtime_train, wtime_vali)
+        for k in k_list:
+            print("k",k)
+            wtime_prediction = pred_rating(rating_train, wtime_sim, k)
+            rmse = evaluation(wtime_prediction, rating_vali)
+            cv_rmse[2][k_list.index(k)] += rmse/fold_n
+        print("cost time:",time.time()-ts)
+    for k in k_list:
+        print("cross validation rmse when k =",k)
+        print(cv_rmse[2][k_list.index(k)])
