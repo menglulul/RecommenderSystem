@@ -157,6 +157,7 @@ def pred_rating(rate_train, rate_sim, k):
         sim_users = get_k_highest(sim, rate_train, k)  # ratings by k most similar users
         prediction[i] = np.apply_along_axis(get_average_rating, 0, sim_users)  # averaged ratings for i-th user
     # prediction = np.around((prediction * 2))/2
+
     return prediction
 
 
@@ -179,6 +180,7 @@ def evaluation(rate_prediction, rate_test):
     for i in range(row):
         for j in range(col):
             if rate_test[i][j] > 0 and rate_prediction[i][j] > 0:
+
                 MSE += math.pow((rate_test[i][j] - rate_prediction[i][j]), 2)
                 cnt += 1
     MSE /= cnt
@@ -186,7 +188,6 @@ def evaluation(rate_prediction, rate_test):
     # RMSE = sqrt(mean_squared_error(rate_test, rate_prediction))
     print("RMSE", RMSE)
     return RMSE
-
 
 if __name__ == "__main__":
     r_file_path = "new_processed_ratings.csv"
@@ -206,6 +207,13 @@ if __name__ == "__main__":
     print("total: ", len(tags))
 
     # shuffle data
+    indices = np.arange(ratings.shape[0])
+    np.random.shuffle(indices)
+    ratings = ratings[indices]
+    times = times[indices]
+    tags = tags[indices]
+
+    #shuffle data
     indices = np.arange(ratings.shape[0])
     np.random.shuffle(indices)
     ratings = ratings[indices]
