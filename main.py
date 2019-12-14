@@ -39,10 +39,6 @@ def train_vali_split(data, ratio=0.7):
     vali_set = data[cut:, 1:]
     return train_set, vali_set
 
-
-# def tag2vec(tag_train, tag_vali):
-#     return tag_train_vec, tag_vali_vec
-
 def cal_pearson(u1, u2):
     corr, pvalue = pearsonr(u1, u2)
     # print("Pearsonr", corr)
@@ -71,6 +67,10 @@ def cal_tag_sim(tag_train, tag_test):
             sim_mat[i][j] = 1/(np.linalg.norm(data_train[j]-data_test[i]) + 1)
     return sim_mat
 
+def word_to_vec(text):
+    #TODO
+    return
+
 def gen_vocab(tag_train):
     K = 200  # choose top K words
     dict = {}
@@ -95,7 +95,7 @@ def gen_vocab(tag_train):
 
 def bagOfWords(tag_raw, vocab):
     tag_mat = np.zeros((len(tag_raw), len(vocab)))
-    for i in len(tag_raw):
+    for i in range(len(tag_raw)):
         words = re.split(',', tag_raw[i])
         for j in range(len(vocab)):
             for word in words:
@@ -192,11 +192,11 @@ if __name__ == "__main__":
     print("tags data load successfully")
     print("total: ",len(tags))
 
-    fold_n = 5
+    fold_n = 3
     k_list = [1,3,5,10,15,20,30,50]
-    #k_list = [10]
-    cv_rmse = np.zeros((3,len(k_list)))
 
+    #part 1
+    cv_rmse = np.zeros(len(k_list))
     print("base on ratings")
     for i in range(fold_n):
         ts = time.time()
@@ -206,12 +206,14 @@ if __name__ == "__main__":
             print("k",k)
             rating_prediction = pred_rating(rating_train, rating_sim, k)
             rmse = evaluation(rating_prediction, rating_vali)
-            cv_rmse[0][k_list.index(k)] += rmse/fold_n
+            cv_rmse[k_list.index(k)] += rmse/fold_n
         print("cost time:",time.time()-ts)
     for k in k_list:
         print("cross validation rmse when k =",k)
-        print(cv_rmse[0][k_list.index(k)])
+        print(cv_rmse[k_list.index(k)])
     
+    #part 2
+    cv_rmse = np.zeros(len(k_list))
     print("base on time")
     for i in range(fold_n):
         ts = time.time()
@@ -222,29 +224,32 @@ if __name__ == "__main__":
             print("k",k)
             time_prediction = pred_rating(rating_train, time_sim, k)
             rmse = evaluation(time_prediction, rating_vali)
-            cv_rmse[1][k_list.index(k)] += rmse/fold_n
+            cv_rmse[k_list.index(k)] += rmse/fold_n
         print("cost time:",time.time()-ts)
     for k in k_list:
         print("cross validation rmse when k =",k)
-        print(cv_rmse[1][k_list.index(k)])
+        print(cv_rmse[k_list.index(k)])
 
+    #part 3
+    cv_rmse = np.zeros(len(k_list))
     print("base on tags - wordbag")
     for i in range(fold_n):
         ts = time.time()
         rating_train, rating_vali = fold(ratings, i, fold_n)
         tag_train, tag_vali = fold(tags, i, fold_n)
-        tag_sim = cal_tag_sim(rating_train, rating_vali)
+        tag_sim = cal_tag_sim(tag_train, tag_vali)
         for k in k_list:
             print("k",k)
-            tag_prediction = pred_rating(rating_train, time_sim, k)
+            tag_prediction = pred_rating(rating_train, tag_sim, k)
             rmse = evaluation(tag_prediction, rating_vali)
-            cv_rmse[1][k_list.index(k)] += rmse/fold_n
+            cv_rmse[k_list.index(k)] += rmse/fold_n
         print("cost time:",time.time()-ts)
     for k in k_list:
         print("cross validation rmse when k =",k)
-        print(cv_rmse[1][k_list.index(k)])
+        print(cv_rmse[k_list.index(k)])
 
-
+    #part 4
+    cv_rmse = np.zeros(len(k_list))
     print("weighted time")
     for i in range(fold_n):
         ts = time.time()
@@ -257,8 +262,31 @@ if __name__ == "__main__":
             print("k",k)
             wtime_prediction = pred_rating(rating_train, wtime_sim, k)
             rmse = evaluation(wtime_prediction, rating_vali)
-            cv_rmse[2][k_list.index(k)] += rmse/fold_n
+            cv_rmse[k_list.index(k)] += rmse/fold_n
         print("cost time:",time.time()-ts)
     for k in k_list:
         print("cross validation rmse when k =",k)
-        print(cv_rmse[2][k_list.index(k)])
+        print(cv_rmse[k_list.index(k)])
+
+    #part 5
+    # no cross-validation
+    # k=1
+    cv_rmse = np.zeros(len(k_list))
+    print("combined similarity")
+    ts = time.time()
+    rating_train, rating_vali = fold(ratings, 0, fold_n)
+    rating_sim = cal_rate_sim(rating_train, rating_vali)
+    time_train, time_vali = fold(times, 0, fold_n)
+    wtime_train = weighted_time(time_train)
+    wtime_vali = weighted_time(time_vali)
+    wtime_sim = cal_rate_sim(wtime_train, wtime_vali)
+    tag_train, tag_vali = fold(tags, 0, fold_n)
+    tag_sim = cal_tag_sim(tag_train, tag_vali)
+    for i in np.arange(0,1,0.2):
+        for j in np.arange(0,1,0.2):
+            print("i",i)
+            print("j",j)
+            combined_sim = i*rating_sim + (1-i)*(j*wtime_sim+(1-j)*tag_sim)
+            rating_prediction = pred_rating(rating_train, combined_sim, 1)
+            rmse = evaluation(rating_prediction, rating_vali)
+    print("cost time:",time.time()-ts)
