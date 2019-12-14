@@ -157,6 +157,7 @@ def pred_rating(rate_train, rate_sim, k):
         sim = rate_sim[i]  # all user sim scores for i-th user
         sim_users = get_k_highest(sim, rate_train, k)  # ratings by k most similar users
         prediction[i] = np.apply_along_axis(get_average_rating, 0, sim_users)  # averaged ratings for i-th user
+    #prediction = np.around((prediction * 2))/2
     return prediction
 
 def weighted_time(u_ts):
@@ -198,8 +199,19 @@ if __name__ == "__main__":
     print("tags data load successfully")
     print("total: ",len(tags))
 
+    #shuffle data
+    indices = np.arange(ratings.shape[0])
+    np.random.shuffle(indices)
+    ratings = ratings[indices]
+    times = times[indices]
+    tags = tags[indices]
+
     fold_n = 3
     k_list = [1,3,5,10,15,20,30,50]
+    #for testing with smaller dataset
+    #ratings = ratings[:100]
+    #times = times[:100]
+    #tags = tags[:100]
 
     #part 1
     cv_rmse = np.zeros(len(k_list))
