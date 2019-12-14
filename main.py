@@ -170,6 +170,12 @@ def weighted_time(u_ts):
     return u_wt
 
 def evaluation(rate_prediction, rate_test):
+    row = rate_test.shape[0]
+    col = rate_test.shape[1]
+    for i in range(row):
+        for j in range(col):
+            if rate_test[i][j] == 0:
+                rate_prediction[i][j] = 0
     RMSE = sqrt(mean_squared_error(rate_test, rate_prediction))
     print("RMSE", RMSE)
     return RMSE
