@@ -173,14 +173,18 @@ def weighted_time(u_ts):
 def evaluation(rate_prediction, rate_test):
     row = rate_test.shape[0]
     col = rate_test.shape[1]
+    MSE = 0
+    cnt = 0
     for i in range(row):
         for j in range(col):
-            if rate_test[i][j] == 0:
-                rate_prediction[i][j] = 0
-    RMSE = sqrt(mean_squared_error(rate_test, rate_prediction))
+            if rate_test[i][j] > 0 and rate_prediction[i][j] > 0:
+                MSE += math.pow((rate_test[i][j] - rate_prediction[i][j]),2)
+                cnt += 1
+    MSE /= cnt
+    RMSE = sqrt(MSE)
+    #RMSE = sqrt(mean_squared_error(rate_test, rate_prediction))
     print("RMSE", RMSE)
     return RMSE
-
 
 if __name__ == "__main__":
     r_file_path = "new_processed_ratings.csv"
@@ -207,7 +211,7 @@ if __name__ == "__main__":
     tags = tags[indices]
 
     fold_n = 3
-    k_list = [1,3,5,10,15,20,30,50]
+    k_list = [1,3,5,10,15,20,30,50,75,100]
     #for testing with smaller dataset
     #ratings = ratings[:100]
     #times = times[:100]
