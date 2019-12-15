@@ -207,13 +207,7 @@ if __name__ == "__main__":
     print("total: ", len(tags))
 
     # shuffle data
-    indices = np.arange(ratings.shape[0])
-    np.random.shuffle(indices)
-    ratings = ratings[indices]
-    times = times[indices]
-    tags = tags[indices]
-
-    #shuffle data
+    np.random.seed(5)
     indices = np.arange(ratings.shape[0])
     np.random.shuffle(indices)
     ratings = ratings[indices]
@@ -309,7 +303,7 @@ if __name__ == "__main__":
     rating_train, rating_vali = fold(ratings, 0, fold_n)
     rating_sim = cal_rate_sim(rating_train, rating_vali)
     time_train, time_vali = fold(times, 0, fold_n)
-    time_sim = cal_rate_sim(rating_train, rating_vali)
+    time_sim = cal_rate_sim(time_train, time_vali)
     tag_train, tag_vali = fold(tags, 0, fold_n)
     tag_sim = cal_tag_sim(tag_train, tag_vali)
     for i in np.arange(0,1.3,0.2):
