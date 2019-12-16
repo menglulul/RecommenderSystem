@@ -10,3 +10,5 @@ python main.py
 ```
 
 The output will include the RMSE result of each of our model, changing parameters and performing cross-validation.
+
+Use data-preprocess.py and MovieLens 20M data to generate the processed data.
