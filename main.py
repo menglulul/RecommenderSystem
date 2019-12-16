@@ -226,7 +226,27 @@ if __name__ == "__main__":
     # ratings = ratings[:100]
     # times = times[:100]
     # tags = tags[:100]
+    
+    fold_n = 5
+    print("combined similarity")
+    ts = time.time()
+    rating_train, rating_vali = fold(ratings, 0, fold_n)
+    rating_sim = cal_rate_sim(rating_train, rating_vali)
+    time_train, time_vali = fold(times, 0, fold_n)
+    time_sim = cal_rate_sim(rating_train, rating_vali)
+    tag_train, tag_vali = fold(tags, 0, fold_n)
+    tag_sim = cal_tag_sim(tag_train, tag_vali)
+    for i in np.arange(0.6,1.3,0.2):
+        for j in np.arange(0,1.3,0.2):
+            print("i",i)
+            print("j",j)
+            combined_sim = i*rating_sim + (1-i)*(j*time_sim+(1-j)*tag_sim)
+            rating_prediction = pred_rating(rating_train, combined_sim, 100)
+            rmse = evaluation(rating_prediction, rating_vali)
+    print("cost time:",time.time()-ts)
 
+
+'''
     # part 1
     cv_rmse = np.zeros(len(k_list))
     print("base on ratings")
@@ -299,24 +319,8 @@ if __name__ == "__main__":
     for k in k_list:
         print("cross validation rmse when k =", k)
         print(cv_rmse[k_list.index(k)])
-
+'''
     # part 5
     # no cross-validation
     # k=1
-    fold_n = 5
-    print("combined similarity")
-    ts = time.time()
-    rating_train, rating_vali = fold(ratings, 0, fold_n)
-    rating_sim = cal_rate_sim(rating_train, rating_vali)
-    time_train, time_vali = fold(times, 0, fold_n)
-    time_sim = cal_rate_sim(rating_train, rating_vali)
-    tag_train, tag_vali = fold(tags, 0, fold_n)
-    tag_sim = cal_tag_sim(tag_train, tag_vali)
-    for i in np.arange(0,1.3,0.2):
-        for j in np.arange(0,1.3,0.2):
-            print("i",i)
-            print("j",j)
-            combined_sim = i*rating_sim + (1-i)*(j*time_sim+(1-j)*tag_sim)
-            rating_prediction = pred_rating(rating_train, combined_sim, 100)
-            rmse = evaluation(rating_prediction, rating_vali)
-    print("cost time:",time.time()-ts)
+   
