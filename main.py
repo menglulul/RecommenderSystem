@@ -207,13 +207,7 @@ if __name__ == "__main__":
     print("total: ", len(tags))
 
     # shuffle data
-    indices = np.arange(ratings.shape[0])
-    np.random.shuffle(indices)
-    ratings = ratings[indices]
-    times = times[indices]
-    tags = tags[indices]
-
-    #shuffle data
+    np.random.seed(5)
     indices = np.arange(ratings.shape[0])
     np.random.shuffle(indices)
     ratings = ratings[indices]
@@ -323,4 +317,24 @@ if __name__ == "__main__":
     # part 5
     # no cross-validation
     # k=1
+<<<<<<< HEAD
    
+=======
+    fold_n = 5
+    print("combined similarity")
+    ts = time.time()
+    rating_train, rating_vali = fold(ratings, 0, fold_n)
+    rating_sim = cal_rate_sim(rating_train, rating_vali)
+    time_train, time_vali = fold(times, 0, fold_n)
+    time_sim = cal_rate_sim(time_train, time_vali)
+    tag_train, tag_vali = fold(tags, 0, fold_n)
+    tag_sim = cal_tag_sim(tag_train, tag_vali)
+    for i in np.arange(0,1.3,0.2):
+        for j in np.arange(0,1.3,0.2):
+            print("i",i)
+            print("j",j)
+            combined_sim = i*rating_sim + (1-i)*(j*time_sim+(1-j)*tag_sim)
+            rating_prediction = pred_rating(rating_train, combined_sim, 100)
+            rmse = evaluation(rating_prediction, rating_vali)
+    print("cost time:",time.time()-ts)
+>>>>>>> 42cf97d6e84d597257bd0f135426e536c13cb586
