@@ -1,6 +1,6 @@
 # RecommenderSystem
 
-This is the implementation of a recommender system based on User-Based Collaborative Filtering with respect of tag and time.
+This is the implementation of a recommender system based on User-Based Collaborative Filtering with respect to tag and time information.
 
 Usage:
 
