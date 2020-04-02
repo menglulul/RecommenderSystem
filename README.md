@@ -1,7 +1,6 @@
 # RecommenderSystem
 
-This is the source code of CS6501-007 Data Mining course project 3 in which we implemented a recommender system base on MovieLens dataset.
-Team member: Lulu Meng, Xiaoyu Cheng, Yijing Wang, Xiaoying Li
+This is the implementation of a recommender system based on User-Based Collaborative Filtering with respect of tag and time.
 
 Usage:
 
